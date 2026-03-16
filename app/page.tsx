@@ -1,6 +1,7 @@
 import { DashboardShell } from "@/components/dashboard-shell";
 import { DashboardCard } from "@/components/dashboard-card";
 import { BurndownChart } from "@/components/burndown-chart";
+import { EpicPortfolioList } from "@/components/epic-portfolio-list";
 import { WorkstreamBoard } from "@/components/workstream-board";
 import { getOverviewData } from "@/lib/dashboard";
 
@@ -66,6 +67,29 @@ export default async function HomePage() {
           footer="Grouped by current epic focus, with blockers and due-date pressure visible."
         >
           <WorkstreamBoard groups={dashboardData.workstreams} />
+        </DashboardCard>
+      </section>
+
+      <section className="dashboard-grid">
+        <DashboardCard
+          title="Epic portfolio"
+          subtitle="Clairio Suite"
+          footer="Lists inside the Clairio Suite folder are treated as the active delivery epics."
+          accent="gold"
+        >
+          <EpicPortfolioList items={dashboardData.epicPortfolio} />
+        </DashboardCard>
+        <DashboardCard
+          title="Epic focus"
+          subtitle="What leadership should watch"
+          footer="This keeps the Mission Control layer tied to the actual product breakdown instead of generic task counts."
+          accent="coral"
+        >
+          <div className="bullet-stack">
+            <p>Open work shows where execution load is accumulating by epic.</p>
+            <p>Blocked counts reveal which epics need intervention, not just which tasks are stuck.</p>
+            <p>Owner coverage shows whether work is concentrated too narrowly inside an epic.</p>
+          </div>
         </DashboardCard>
       </section>
 

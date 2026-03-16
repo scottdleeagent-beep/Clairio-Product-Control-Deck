@@ -14,6 +14,7 @@ export async function getOverviewData() {
   const tasks = getScopedTasks();
   const initiatives = getScopedInitiatives(tasks);
   const latestSyncRun = getSyncRuns(1)[0];
+  const epicPortfolio = getEpicPortfolio(tasks);
 
   const openTasks = tasks.filter((task) => task.statusGroup !== TaskStatusGroup.DONE);
   const blockedTasks = openTasks.filter((task) => task.statusGroup === TaskStatusGroup.BLOCKED);
@@ -52,6 +53,7 @@ export async function getOverviewData() {
     ],
     burndown: getBurndownPoints(),
     workstreams: getWorkstreams(tasks),
+    epicPortfolio,
     syncStatus: latestSyncRun
       ? `Clairio Suite sync ${formatRelativeMinutes(latestSyncRun.finishedAt ?? latestSyncRun.startedAt)}`
       : "No Clairio Suite sync yet"
@@ -67,6 +69,7 @@ export async function getTeamViewData() {
 
   return {
     workstreams: getWorkstreams(tasks),
+    epicPortfolio: getEpicPortfolio(tasks),
     teamHighlights: [
       {
         title: "Unassigned work",
@@ -142,6 +145,7 @@ export async function getAnalyticsViewData() {
       }
     ],
     burndown: getBurndownPoints(),
+    epicPortfolio: getEpicPortfolio(tasks),
     initiativeHealth: initiatives.map((initiative) => {
       const open = initiative.tasks.filter((task) => task.statusGroup !== TaskStatusGroup.DONE);
       const blocked = open.filter((task) => task.statusGroup === TaskStatusGroup.BLOCKED).length;
@@ -252,6 +256,57 @@ function getWorkstreams(tasks: ReturnType<typeof getTasks>) {
   }
 
   return Array.from(groups.values()).sort((a, b) => b.active - a.active);
+}
+
+function getEpicPortfolio(tasks: ReturnType<typeof getTasks>) {
+  const grouped = new Map<
+    string,
+    {
+      name: string;
+      open: number;
+      done: number;
+      blocked: number;
+      owners: Set<string>;
+    }
+  >();
+
+  tasks.forEach((task) => {
+    const name = task.initiativeName ?? "Unassigned epic";
+    const current = grouped.get(name) ?? {
+      name,
+      open: 0,
+      done: 0,
+      blocked: 0,
+      owners: new Set<string>()
+    };
+
+    if (task.statusGroup === TaskStatusGroup.DONE) {
+      current.done += 1;
+    } else {
+      current.open += 1;
+    }
+
+    if (task.statusGroup === TaskStatusGroup.BLOCKED) {
+      current.blocked += 1;
+    }
+
+    if (task.ownerName) {
+      current.owners.add(task.ownerName);
+    }
+
+    grouped.set(name, current);
+  });
+
+  return Array.from(grouped.values())
+    .map((epic) => ({
+      name: epic.name,
+      open: epic.open,
+      done: epic.done,
+      blocked: epic.blocked,
+      owners: epic.owners.size
+    }))
+    .sort((a, b) => b.open - a.open)
+    .slice(0, 6);
 }
 
 function getScopedTasks() {

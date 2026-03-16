@@ -7,6 +7,7 @@ import {
 } from "@/lib/domain";
 import { getClickUpScopeConfig } from "@/lib/env";
 import {
+  clearClickUpSyncData,
   createSyncRun,
   finalizeSyncRun,
   insertStatusEvent,
@@ -33,6 +34,11 @@ export async function runClickUpSync(options?: {
 
   try {
     const client = new ClickUpClient();
+
+    if (!options?.updatedAfter) {
+      clearClickUpSyncData();
+    }
+
     const rawTasks = await client.getScopedFolderTasks(options?.updatedAfter);
     const scopedTasks = rawTasks.filter(isClairioSuiteTask);
     const normalizedTasks = scopedTasks.map(normalizeClickUpTask);

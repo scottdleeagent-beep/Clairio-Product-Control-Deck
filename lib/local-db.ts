@@ -584,6 +584,25 @@ export function insertStatusEvent(input: {
     );
 }
 
+export function clearClickUpSyncData() {
+  const db = getDb();
+  const taskIds = (
+    db.prepare("SELECT id FROM tasks WHERE source_system = ?").all(SourceSystem.CLICKUP) as Array<{
+      id: string;
+    }>
+  ).map((row) => row.id);
+
+  if (taskIds.length === 0) {
+    return;
+  }
+
+  const placeholders = taskIds.map(() => "?").join(", ");
+  db.prepare(`DELETE FROM task_assignments WHERE task_id IN (${placeholders})`).run(...taskIds);
+  db.prepare(`DELETE FROM task_snapshots WHERE task_id IN (${placeholders})`).run(...taskIds);
+  db.prepare(`DELETE FROM task_status_events WHERE task_id IN (${placeholders})`).run(...taskIds);
+  db.prepare(`DELETE FROM tasks WHERE id IN (${placeholders})`).run(...taskIds);
+}
+
 function initializeSchema(db: DatabaseSync) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS teams (

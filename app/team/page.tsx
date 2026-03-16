@@ -1,5 +1,6 @@
 import { DashboardShell } from "@/components/dashboard-shell";
 import { DashboardCard } from "@/components/dashboard-card";
+import { EpicPortfolioList } from "@/components/epic-portfolio-list";
 import { getTeamViewData } from "@/lib/dashboard";
 
 export default async function TeamPage() {
@@ -52,6 +53,28 @@ export default async function TeamPage() {
             <p className="card-number">{item.value}</p>
           </DashboardCard>
         ))}
+      </section>
+
+      <section className="dashboard-grid">
+        <DashboardCard
+          title="Epic load"
+          subtitle="Where the team is concentrated"
+          footer="This view helps you see which Clairio Suite epics are absorbing the most active work."
+          accent="gold"
+        >
+          <EpicPortfolioList items={dashboardData.epicPortfolio} />
+        </DashboardCard>
+        <DashboardCard
+          title="Standup framing"
+          subtitle="How to use this page"
+          footer="Use owners for daily execution, and use epic load to catch resourcing imbalances earlier."
+        >
+          <div className="bullet-stack">
+            <p>Start with blocked owners, then move to high-open epics.</p>
+            <p>Check overdue work inside the epics carrying the most open tasks.</p>
+            <p>Use the epic count and owner count together before reassigning work.</p>
+          </div>
+        </DashboardCard>
       </section>
     </DashboardShell>
   );
