@@ -9,8 +9,8 @@ export default async function TeamPage() {
     <DashboardShell
       eyebrow="Execution"
       title="Team View"
-      description="Use this view for standups, staffing conversations, and overload checks."
-      status="Team workloads backed by live database metrics"
+      description="Use this view for Clairio Suite standups, staffing conversations, and overload checks."
+      status="Team workloads scoped to Clairio Suite"
     >
       <section className="table-panel panel">
         <div className="table-header">

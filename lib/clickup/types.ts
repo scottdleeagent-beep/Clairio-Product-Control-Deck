@@ -28,6 +28,9 @@ export type ClickUpCustomFieldValue = {
 export type ClickUpListRef = {
   id: string;
   name: string;
+  folder?: ClickUpFolderRef;
+  space?: ClickUpSpaceRef;
+  task_count?: number;
 };
 
 export type ClickUpFolderRef = {
@@ -70,3 +73,6 @@ export type ClickUpTasksResponse = {
   last_page?: boolean;
 };
 
+export type ClickUpFolderListsResponse = {
+  lists: ClickUpListRef[];
+};

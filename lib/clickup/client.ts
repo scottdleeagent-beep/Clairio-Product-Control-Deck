@@ -1,43 +1,73 @@
-import { getEnv } from "@/lib/env";
-import type { ClickUpTask, ClickUpTasksResponse } from "@/lib/clickup/types";
+import { getClickUpScopeConfig } from "@/lib/env";
+import { getClickUpOAuthConnection } from "@/lib/local-db";
+import type {
+  ClickUpFolderListsResponse,
+  ClickUpTask,
+  ClickUpTasksResponse
+} from "@/lib/clickup/types";
 
 const CLICKUP_API_BASE = "https://api.clickup.com/api/v2";
 
 type ClickUpClientOptions = {
   apiToken?: string;
+  accessToken?: string;
 };
 
 export class ClickUpClient {
-  private readonly apiToken: string;
+  private readonly authHeader: string;
 
   constructor(options: ClickUpClientOptions = {}) {
-    this.apiToken = options.apiToken ?? getEnv().CLICKUP_API_TOKEN;
+    const oauthAccessToken = options.accessToken ?? getClickUpOAuthConnection()?.accessToken ?? null;
+    const personalToken = options.apiToken ?? process.env.CLICKUP_API_TOKEN ?? null;
+
+    if (oauthAccessToken) {
+      this.authHeader = `Bearer ${oauthAccessToken}`;
+      return;
+    }
+
+    if (personalToken) {
+      this.authHeader = personalToken;
+      return;
+    }
+
+    throw new Error(
+      "No ClickUp access token is configured. Connect ClickUp with OAuth or add CLICKUP_API_TOKEN."
+    );
   }
 
-  async getFilteredTeamTasks(updatedAfter?: Date): Promise<ClickUpTask[]> {
-    const teamId = getEnv().CLICKUP_TEAM_ID ?? getEnv().CLICKUP_WORKSPACE_ID;
+  async getScopedFolderTasks(updatedAfter?: Date): Promise<ClickUpTask[]> {
+    const scope = getClickUpScopeConfig();
+
+    if (!scope.folderId) {
+      throw new Error("Missing ClickUp folder ID for Clairio Suite scope.");
+    }
+
     const collected: ClickUpTask[] = [];
-    let page = 0;
-    let hasMore = true;
+    const lists = await this.request<ClickUpFolderListsResponse>(`/folder/${scope.folderId}/list`);
 
-    while (hasMore) {
-      const searchParams = new URLSearchParams({
-        subtasks: "true",
-        include_closed: "true",
-        page: page.toString()
-      });
+    for (const list of lists.lists) {
+      let page = 0;
+      let hasMore = true;
 
-      if (updatedAfter) {
-        searchParams.set("date_updated_gt", updatedAfter.getTime().toString());
+      while (hasMore) {
+        const searchParams = new URLSearchParams({
+          subtasks: "true",
+          include_closed: "true",
+          page: page.toString()
+        });
+
+        if (updatedAfter) {
+          searchParams.set("date_updated_gt", updatedAfter.getTime().toString());
+        }
+
+        const response = await this.request<ClickUpTasksResponse>(
+          `/list/${list.id}/task?${searchParams.toString()}`
+        );
+
+        collected.push(...response.tasks);
+        hasMore = response.last_page === false;
+        page += 1;
       }
-
-      const response = await this.request<ClickUpTasksResponse>(
-        `/team/${teamId}/task?${searchParams.toString()}`
-      );
-
-      collected.push(...response.tasks);
-      hasMore = response.last_page === false;
-      page += 1;
     }
 
     return collected;
@@ -50,7 +80,7 @@ export class ClickUpClient {
   private async request<T>(path: string): Promise<T> {
     const response = await fetch(`${CLICKUP_API_BASE}${path}`, {
       headers: {
-        Authorization: this.apiToken,
+        Authorization: this.authHeader,
         "Content-Type": "application/json"
       },
       cache: "no-store"
@@ -64,4 +94,3 @@ export class ClickUpClient {
     return response.json() as Promise<T>;
   }
 }
-

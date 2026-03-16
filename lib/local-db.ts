@@ -47,6 +47,15 @@ type SyncRunRecord = {
   metadata: string | null;
 };
 
+type OAuthConnectionRecord = {
+  provider: string;
+  access_token: string;
+  token_type: string | null;
+  workspace_payload: string | null;
+  connected_at: string;
+  updated_at: string;
+};
+
 export type LocalTaskRow = {
   id: string;
   title: string;
@@ -234,6 +243,53 @@ export function getCounts() {
     initiativeCount,
     latestSnapshotDate: toDate(latestSnapshot.date)
   };
+}
+
+export function getClickUpOAuthConnection() {
+  const row = getDb()
+    .prepare("SELECT * FROM oauth_connections WHERE provider = 'clickup' LIMIT 1")
+    .get() as OAuthConnectionRecord | undefined;
+
+  if (!row) {
+    return null;
+  }
+
+  return {
+    provider: row.provider,
+    accessToken: row.access_token,
+    tokenType: row.token_type,
+    workspaces: row.workspace_payload ? (JSON.parse(row.workspace_payload) as unknown[]) : [],
+    connectedAt: new Date(row.connected_at),
+    updatedAt: new Date(row.updated_at)
+  };
+}
+
+export function saveClickUpOAuthConnection(input: {
+  accessToken: string;
+  tokenType?: string | null;
+  workspaces: unknown[];
+}) {
+  const db = getDb();
+  const now = new Date().toISOString();
+
+  db.prepare(
+    `
+    INSERT INTO oauth_connections (
+      provider, access_token, token_type, workspace_payload, connected_at, updated_at
+    ) VALUES ('clickup', ?, ?, ?, ?, ?)
+    ON CONFLICT(provider) DO UPDATE SET
+      access_token = excluded.access_token,
+      token_type = excluded.token_type,
+      workspace_payload = excluded.workspace_payload,
+      updated_at = excluded.updated_at
+    `
+  ).run(
+    input.accessToken,
+    input.tokenType ?? "Bearer",
+    JSON.stringify(input.workspaces),
+    now,
+    now
+  );
 }
 
 export function createSyncRun(sourceSystem: SourceSystemValue, metadata?: Record<string, unknown>) {
@@ -626,6 +682,15 @@ function initializeSchema(db: DatabaseSync) {
       records_upserted INTEGER NOT NULL,
       error_message TEXT,
       metadata TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS oauth_connections (
+      provider TEXT PRIMARY KEY,
+      access_token TEXT NOT NULL,
+      token_type TEXT,
+      workspace_payload TEXT,
+      connected_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
     );
   `);
 }

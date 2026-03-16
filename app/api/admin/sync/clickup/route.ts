@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { runClickUpSync } from "@/lib/clickup/sync";
 import { getSyncAdminData } from "@/lib/dashboard";
+import { getClickUpOAuthConnection } from "@/lib/local-db";
 
 export async function GET() {
   const data = await getSyncAdminData();
@@ -13,10 +14,15 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    if (!process.env.CLICKUP_API_TOKEN || !process.env.CLICKUP_WORKSPACE_ID) {
+    const hasOAuthConnection = Boolean(getClickUpOAuthConnection()?.accessToken);
+    const hasPersonalToken = Boolean(process.env.CLICKUP_API_TOKEN);
+    const hasWorkspace = Boolean(process.env.CLICKUP_WORKSPACE_ID);
+
+    if ((!hasOAuthConnection && !hasPersonalToken) || !hasWorkspace) {
       return NextResponse.json(
         {
-          error: "ClickUp credentials are missing. Add CLICKUP_API_TOKEN and CLICKUP_WORKSPACE_ID to enable sync."
+          error:
+            "ClickUp credentials are missing. Connect ClickUp with OAuth or add CLICKUP_API_TOKEN, and make sure CLICKUP_WORKSPACE_ID is set."
         },
         { status: 400 }
       );

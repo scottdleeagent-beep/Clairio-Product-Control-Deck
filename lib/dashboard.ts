@@ -1,5 +1,6 @@
 import { SourceSystem, TaskStatusGroup, type TaskStatusGroup as TaskStatusGroupValue } from "@/lib/domain";
 import {
+  getClickUpOAuthConnection,
   getCounts,
   getInitiatives,
   getSyncRuns,
@@ -10,8 +11,8 @@ import {
 
 export async function getOverviewData() {
   const now = new Date();
-  const tasks = getTasks();
-  const initiatives = getInitiatives();
+  const tasks = getScopedTasks();
+  const initiatives = getScopedInitiatives(tasks);
   const latestSyncRun = getSyncRuns(1)[0];
 
   const openTasks = tasks.filter((task) => task.statusGroup !== TaskStatusGroup.DONE);
@@ -52,13 +53,13 @@ export async function getOverviewData() {
     burndown: getBurndownPoints(),
     workstreams: getWorkstreams(tasks),
     syncStatus: latestSyncRun
-      ? `Last ClickUp sync ${formatRelativeMinutes(latestSyncRun.finishedAt ?? latestSyncRun.startedAt)}`
-      : "No ClickUp sync yet"
+      ? `Clairio Suite sync ${formatRelativeMinutes(latestSyncRun.finishedAt ?? latestSyncRun.startedAt)}`
+      : "No Clairio Suite sync yet"
   };
 }
 
 export async function getTeamViewData() {
-  const tasks = getTasks();
+  const tasks = getScopedTasks();
   const openTasks = tasks.filter((task) => task.statusGroup !== TaskStatusGroup.DONE);
   const dueSoon = openTasks.filter(
     (task) => task.dueDate !== null && task.dueDate <= daysAhead(3)
@@ -90,10 +91,11 @@ export async function getTeamViewData() {
 }
 
 export async function getAnalyticsViewData() {
-  const tasks = getTasks();
-  const snapshots = getTaskSnapshots();
-  const statusEvents = getTaskStatusEvents();
-  const initiatives = getInitiatives();
+  const tasks = getScopedTasks();
+  const taskIds = new Set(tasks.map((task) => task.id));
+  const snapshots = getTaskSnapshots().filter((snapshot) => taskIds.has(snapshot.taskId));
+  const statusEvents = getTaskStatusEvents().filter((event) => taskIds.has(event.taskId));
+  const initiatives = getScopedInitiatives(tasks);
 
   const currentWeekCompleted = tasks.filter(
     (task) => task.completedAt && task.completedAt >= daysAgo(7)
@@ -160,24 +162,39 @@ export async function getAnalyticsViewData() {
 export async function getSyncAdminData() {
   const runs = getSyncRuns(10).filter((run) => run.sourceSystem === SourceSystem.CLICKUP);
   const counts = getCounts();
+  const oauthConnection = getClickUpOAuthConnection();
+  const hasOAuthConfig = Boolean(
+    process.env.CLICKUP_CLIENT_ID &&
+      process.env.CLICKUP_CLIENT_SECRET &&
+      process.env.CLICKUP_REDIRECT_URI
+  );
+  const hasPersonalToken = Boolean(process.env.CLICKUP_API_TOKEN);
 
   return {
     runs,
     metrics: [
-      { label: "Tasks in database", value: String(counts.taskCount) },
+      { label: "Tasks in scope", value: String(getScopedTasks().length) },
       { label: "People mapped", value: String(counts.userCount) },
-      { label: "Initiatives mapped", value: String(counts.initiativeCount) },
+      { label: "Epics in Clairio Suite", value: String(getScopedInitiatives(getScopedTasks()).length) },
       {
         label: "Latest snapshot",
         value: counts.latestSnapshotDate ? counts.latestSnapshotDate.toISOString().slice(0, 10) : "none"
       }
     ],
-    readyForSync: Boolean(process.env.CLICKUP_API_TOKEN && process.env.CLICKUP_WORKSPACE_ID)
+    readyForSync: Boolean(
+      (oauthConnection?.accessToken || hasPersonalToken) && process.env.CLICKUP_WORKSPACE_ID
+    ),
+    hasOAuthConfig,
+    oauthConnected: Boolean(oauthConnection?.accessToken),
+    oauthWorkspaceCount: oauthConnection?.workspaces.length ?? 0
   };
 }
 
 function getBurndownPoints() {
-  const snapshots = getTaskSnapshots().filter((snapshot) => snapshot.snapshotDate >= daysAgo(5));
+  const taskIds = new Set(getScopedTasks().map((task) => task.id));
+  const snapshots = getTaskSnapshots().filter(
+    (snapshot) => snapshot.snapshotDate >= daysAgo(5) && taskIds.has(snapshot.taskId)
+  );
   const grouped = new Map<string, { day: string; remaining: number; completed: number }>();
 
   for (const snapshot of snapshots) {
@@ -235,6 +252,18 @@ function getWorkstreams(tasks: ReturnType<typeof getTasks>) {
   }
 
   return Array.from(groups.values()).sort((a, b) => b.active - a.active);
+}
+
+function getScopedTasks() {
+  const allTasks = getTasks();
+  const syncedTasks = allTasks.filter((task) => task.id.startsWith("clickup_"));
+
+  return syncedTasks.length > 0 ? syncedTasks : allTasks;
+}
+
+function getScopedInitiatives(tasks: ReturnType<typeof getTasks>) {
+  const taskInitiativeIds = new Set(tasks.map((task) => task.initiativeId).filter(Boolean));
+  return getInitiatives().filter((initiative) => taskInitiativeIds.has(initiative.id));
 }
 
 function countOwnersAboveThreshold(

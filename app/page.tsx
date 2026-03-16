@@ -11,7 +11,7 @@ export default async function HomePage() {
     <DashboardShell
       eyebrow="Clairio AI"
       title="Mission Control"
-      description="A shared operational view of ownership, throughput, and risk across the company."
+      description="A shared operational view of ownership, throughput, and risk for everything inside the Clairio Suite folder."
       status={dashboardData.syncStatus}
     >
       <section className="hero-grid">
@@ -19,9 +19,9 @@ export default async function HomePage() {
           <p className="kicker">Today at a glance</p>
           <h2>See the shape of execution before delivery drift turns into noise.</h2>
           <p className="muted">
-            Mission Control gives Clairio one operational surface for ownership,
-            blockers, trends, and burndown, starting with ClickUp and growing into a
-            native system of record.
+            Mission Control is now scoped specifically to the Clairio Suite folder in ClickUp,
+            so the dashboard reflects the actual product epics, tasks, blockers, trends,
+            and burndown for Clairio product delivery.
           </p>
           <div className="hero-stats">
             {dashboardData.summary.map((item) => (
@@ -55,15 +55,15 @@ export default async function HomePage() {
       <section className="dashboard-grid">
         <DashboardCard
           title="Sprint burndown"
-          subtitle="Platform + Client Delivery"
-          footer="Scope changes are separated from completions for cleaner trend analysis."
+          subtitle="Clairio Suite delivery"
+          footer="Burndown is now computed only from work inside the Clairio Suite folder."
         >
           <BurndownChart points={dashboardData.burndown} />
         </DashboardCard>
         <DashboardCard
           title="Who owns what"
-          subtitle="Active work by person"
-          footer="Grouped by current focus, with blockers and overdue work visible."
+          subtitle="Active Clairio Suite work by person"
+          footer="Grouped by current epic focus, with blockers and due-date pressure visible."
         >
           <WorkstreamBoard groups={dashboardData.workstreams} />
         </DashboardCard>

@@ -1,5 +1,6 @@
 import type { ClickUpTask } from "@/lib/clickup/types";
 import { TaskStatusGroup, type TaskStatusGroup as TaskStatusGroupValue } from "@/lib/domain";
+import { getClickUpScopeConfig } from "@/lib/env";
 import { slugify, toDate, toNullableNumber } from "@/lib/utils";
 
 export type NormalizedAssignment = {
@@ -30,8 +31,11 @@ export type NormalizedTask = {
   metadata: {
     clickupUrl: string | null;
     listName: string | null;
+    listId: string | null;
     folderName: string | null;
+    folderId: string | null;
     spaceName: string | null;
+    spaceId: string | null;
     tags: string[];
   };
 };
@@ -64,6 +68,7 @@ export function mapClickUpStatusGroup(status?: string): TaskStatusGroupValue {
 }
 
 export function normalizeClickUpTask(task: ClickUpTask): NormalizedTask {
+  const scope = getClickUpScopeConfig();
   const assignments =
     task.assignees?.map((assignee) => ({
       externalSourceId: String(assignee.id),
@@ -71,8 +76,12 @@ export function normalizeClickUpTask(task: ClickUpTask): NormalizedTask {
       name: assignee.username
     })) ?? [];
 
-  const initiativeName =
-    task.folder?.name ?? task.list?.name ?? task.space?.name ?? "Unmapped Initiative";
+  const isClairioSuiteTask =
+    (scope.folderId && task.folder?.id === scope.folderId) ||
+    (scope.folderName && task.folder?.name === scope.folderName);
+  const initiativeName = isClairioSuiteTask
+    ? task.list?.name ?? task.folder?.name ?? "Clairio Suite"
+    : task.folder?.name ?? task.list?.name ?? task.space?.name ?? "Unmapped Initiative";
   const priority = task.priority?.priority ?? null;
   const points = toNullableNumber(task.points);
   const hours = task.time_estimate ? Number((task.time_estimate / 3600000).toFixed(2)) : null;
@@ -94,15 +103,20 @@ export function normalizeClickUpTask(task: ClickUpTask): NormalizedTask {
     blockedFlag: statusGroup === TaskStatusGroup.BLOCKED,
     ownerExternalSourceId: assignments[0]?.externalSourceId ?? null,
     parentTaskExternalId: task.parent ?? null,
-    initiativeExternalSourceId: task.folder?.id ?? task.list?.id ?? task.space?.id ?? "unmapped",
+    initiativeExternalSourceId: isClairioSuiteTask
+      ? task.list?.id ?? task.folder?.id ?? "unmapped"
+      : task.folder?.id ?? task.list?.id ?? task.space?.id ?? "unmapped",
     initiativeName,
     initiativeSlug: slugify(initiativeName),
     assignments,
     metadata: {
       clickupUrl: task.url ?? null,
       listName: task.list?.name ?? null,
+      listId: task.list?.id ?? null,
       folderName: task.folder?.name ?? null,
+      folderId: task.folder?.id ?? null,
       spaceName: task.space?.name ?? null,
+      spaceId: task.space?.id ?? null,
       tags
     }
   };

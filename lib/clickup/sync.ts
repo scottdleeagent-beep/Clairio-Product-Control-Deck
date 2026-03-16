@@ -5,6 +5,7 @@ import {
   TaskStatusGroup,
   type TaskStatusGroup as TaskStatusGroupValue
 } from "@/lib/domain";
+import { getClickUpScopeConfig } from "@/lib/env";
 import {
   createSyncRun,
   finalizeSyncRun,
@@ -32,8 +33,9 @@ export async function runClickUpSync(options?: {
 
   try {
     const client = new ClickUpClient();
-    const rawTasks = await client.getFilteredTeamTasks(options?.updatedAfter);
-    const normalizedTasks = rawTasks.map(normalizeClickUpTask);
+    const rawTasks = await client.getScopedFolderTasks(options?.updatedAfter);
+    const scopedTasks = rawTasks.filter(isClairioSuiteTask);
+    const normalizedTasks = scopedTasks.map(normalizeClickUpTask);
     const snapshotDate = startOfDay(new Date());
 
     for (const normalizedTask of normalizedTasks) {
@@ -108,13 +110,13 @@ export async function runClickUpSync(options?: {
     finalizeSyncRun({
       id: syncRunId,
       status: "SUCCEEDED",
-      recordsRead: rawTasks.length,
+      recordsRead: scopedTasks.length,
       recordsUpserted: normalizedTasks.length
     });
 
     return {
       syncRunId,
-      recordsRead: rawTasks.length,
+      recordsRead: scopedTasks.length,
       recordsUpserted: normalizedTasks.length,
       syncedAt: new Date().toISOString()
     };
@@ -147,4 +149,20 @@ export function getStatusSummary(tasks: Array<{ statusGroup: TaskStatusGroupValu
 
 function startOfDay(date: Date) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+}
+
+function isClairioSuiteTask(task: {
+  folder?: { id: string; name: string } | null;
+}) {
+  const scope = getClickUpScopeConfig();
+
+  if (scope.folderId && task.folder?.id === scope.folderId) {
+    return true;
+  }
+
+  if (scope.folderName && task.folder?.name === scope.folderName) {
+    return true;
+  }
+
+  return false;
 }

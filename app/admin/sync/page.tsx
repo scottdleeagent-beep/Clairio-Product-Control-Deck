@@ -1,4 +1,5 @@
 import { DashboardShell } from "@/components/dashboard-shell";
+import { ConnectClickUpButton } from "@/components/connect-clickup-button";
 import { DashboardCard } from "@/components/dashboard-card";
 import { SyncTrigger } from "@/components/sync-trigger";
 import { getSyncAdminData } from "@/lib/dashboard";
@@ -10,8 +11,14 @@ export default async function SyncAdminPage() {
     <DashboardShell
       eyebrow="Operations"
       title="Sync Admin"
-      description="A control room for ingestion freshness, mapping coverage, and recent ClickUp runs."
-      status={data.readyForSync ? "ClickUp credentials detected" : "Running in seed-only mode"}
+      description="A control room for Clairio Suite ingestion freshness, mapping coverage, and recent ClickUp runs."
+      status={
+        data.oauthConnected
+          ? `ClickUp connected across ${data.oauthWorkspaceCount} workspace(s), scoped to Clairio Suite`
+          : data.readyForSync
+            ? "ClickUp credentials detected for Clairio Suite"
+            : "Running in seed-only mode"
+      }
     >
       <section className="three-up">
         {data.metrics.map((metric) => (
@@ -29,15 +36,20 @@ export default async function SyncAdminPage() {
       <section className="dashboard-grid">
         <DashboardCard
           title="Run controls"
-          subtitle="ClickUp ingestion"
-          footer="You can seed locally without credentials, then switch to live ClickUp when tokens are configured."
+          subtitle="Clairio Suite ingestion"
+          footer="Only work from the Clairio Suite folder is included in the dashboard."
           accent="gold"
         >
           <div className="bullet-stack">
-            <p>Use this screen to monitor ingestion freshness and coverage.</p>
+            <p>Use this screen to monitor Clairio Suite ingestion freshness and coverage.</p>
             <p>Recent runs are persisted in the database for auditability.</p>
-            <p>Live ClickUp sync is disabled until credentials are configured.</p>
+            <p>
+              {data.oauthConnected
+                ? "OAuth is connected. Sync now pulls only the Clairio Suite folder."
+                : "Connect ClickUp with OAuth or add a personal token to enable live Clairio Suite sync."}
+            </p>
           </div>
+          <ConnectClickUpButton disabled={!data.hasOAuthConfig} />
           <SyncTrigger disabled={!data.readyForSync} />
         </DashboardCard>
 

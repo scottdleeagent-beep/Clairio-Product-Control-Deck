@@ -32,8 +32,10 @@ Clairio Mission Control is a shared operations app for Clairio AI. The first rel
 - `CLICKUP_API_TOKEN` should be a personal or service token with access to the target workspace
 - `CLICKUP_WORKSPACE_ID` should match the ClickUp workspace you want to mirror
 - `CLICKUP_TEAM_ID` is optional and can be used when you want to sync from a specific ClickUp team endpoint explicitly
+- `CLICKUP_CLIENT_ID`, `CLICKUP_CLIENT_SECRET`, and `CLICKUP_REDIRECT_URI` enable the OAuth flow for the ClickUp app
 - Run `npm run sync:clickup` to execute the starter ingestion pipeline
 - Use `POST /api/admin/sync/clickup` to trigger a sync and `GET /api/admin/sync/clickup` to inspect recent runs
+- Visit `/admin/sync` and use `Connect ClickUp` to authorize the app and store an OAuth access token locally
 
 ## MVP Intent
 

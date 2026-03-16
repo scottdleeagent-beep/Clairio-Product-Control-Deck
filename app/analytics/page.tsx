@@ -11,8 +11,8 @@ export default async function AnalyticsPage() {
     <DashboardShell
       eyebrow="Reporting"
       title="Analytics"
-      description="Trend views that leadership can trust because the platform stores historical snapshots."
-      status="Analytics computed from task snapshots and status history"
+      description="Trend views for Clairio Suite that leadership can trust because the platform stores historical snapshots."
+      status="Analytics computed only from Clairio Suite history"
     >
       <section className="three-up">
         {dashboardData.analytics.map((metric) => (
