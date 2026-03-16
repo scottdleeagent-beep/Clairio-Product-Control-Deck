@@ -30,3 +30,4 @@ export function WorkstreamBoard({ groups }: WorkstreamBoardProps) {
   );
 }
 
+export type { WorkstreamGroup };

@@ -21,6 +21,20 @@ Clairio Mission Control is a shared operations app for Clairio AI. The first rel
 6. Optionally seed sample data with `npm run db:seed`
 7. Start the app with `npm run dev`
 
+## Local Development Database
+
+- The starter app uses Prisma with SQLite for local development
+- Default database URL: `file:./prisma/dev.db`
+- Run `npm run db:push` and `npm run db:seed` before opening the dashboards
+
+## ClickUp Sync
+
+- `CLICKUP_API_TOKEN` should be a personal or service token with access to the target workspace
+- `CLICKUP_WORKSPACE_ID` should match the ClickUp workspace you want to mirror
+- `CLICKUP_TEAM_ID` is optional and can be used when you want to sync from a specific ClickUp team endpoint explicitly
+- Run `npm run sync:clickup` to execute the starter ingestion pipeline
+- Use `POST /api/admin/sync/clickup` to trigger a sync and `GET /api/admin/sync/clickup` to inspect recent runs
+
 ## MVP Intent
 
 The first release should answer:

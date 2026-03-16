@@ -1,13 +1,16 @@
 import { DashboardShell } from "@/components/dashboard-shell";
 import { DashboardCard } from "@/components/dashboard-card";
-import { dashboardData } from "@/lib/mock-data";
+import { getTeamViewData } from "@/lib/dashboard";
 
-export default function TeamPage() {
+export default async function TeamPage() {
+  const dashboardData = await getTeamViewData();
+
   return (
     <DashboardShell
       eyebrow="Execution"
       title="Team View"
       description="Use this view for standups, staffing conversations, and overload checks."
+      status="Team workloads backed by live database metrics"
     >
       <section className="table-panel panel">
         <div className="table-header">
@@ -53,4 +56,3 @@ export default function TeamPage() {
     </DashboardShell>
   );
 }
-

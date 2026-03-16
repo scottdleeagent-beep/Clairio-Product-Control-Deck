@@ -17,8 +17,8 @@ export function DashboardCard({
     <article className={`dashboard-card panel accent-${accent}`}>
       <header className="card-header">
         <div>
+          {subtitle ? <span className="card-subtitle">{subtitle}</span> : null}
           <h3>{title}</h3>
-          {subtitle ? <span>{subtitle}</span> : null}
         </div>
       </header>
       <div className="card-body">{children}</div>
@@ -26,4 +26,3 @@ export function DashboardCard({
     </article>
   );
 }
-

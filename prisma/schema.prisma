@@ -3,8 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
 }
 
 enum SourceSystem {
@@ -52,6 +51,8 @@ model User {
   ledInitiatives   Initiative[]     @relation("InitiativeOwner")
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
+
+  @@index([externalSourceId])
 }
 
 model Initiative {
@@ -66,6 +67,8 @@ model Initiative {
   tasks            Task[]
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+
+  @@index([externalSourceId])
 }
 
 model Task {
@@ -77,8 +80,8 @@ model Task {
   status           String
   statusGroup      TaskStatusGroup
   priority         String?
-  estimatePoints   Decimal?
-  estimateHours    Decimal?
+  estimatePoints   Float?
+  estimateHours    Float?
   dueDate          DateTime?
   startDate        DateTime?
   completedAt      DateTime?
@@ -119,11 +122,11 @@ model TaskSnapshot {
   status         String
   statusGroup    TaskStatusGroup
   blockedFlag    Boolean         @default(false)
-  estimatePoints Decimal?
-  estimateHours  Decimal?
+  estimatePoints Float?
+  estimateHours  Float?
   dueDate        DateTime?
   completedAt    DateTime?
-  ownerIds       String[]
+  ownerIds       Json
   task           Task            @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   @@index([snapshotDate])
@@ -143,13 +146,13 @@ model TaskStatusEvent {
 }
 
 model SyncRun {
-  id             String       @id @default(cuid())
-  sourceSystem   SourceSystem
-  startedAt      DateTime     @default(now())
-  finishedAt     DateTime?
-  status         String
-  recordsRead    Int          @default(0)
-  recordsUpserted Int         @default(0)
-  errorMessage   String?
+  id              String       @id @default(cuid())
+  sourceSystem    SourceSystem
+  startedAt       DateTime     @default(now())
+  finishedAt      DateTime?
+  status          String
+  recordsRead     Int          @default(0)
+  recordsUpserted Int          @default(0)
+  errorMessage    String?
+  metadata        Json?
 }
-

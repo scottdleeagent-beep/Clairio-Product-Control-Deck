@@ -2,6 +2,8 @@ node_modules
 .next
 dist
 coverage
+.local
+data
 .DS_Store
 .env
 .env.local
@@ -10,4 +12,3 @@ coverage
 .env.production.local
 prisma/dev.db
 prisma/dev.db-journal
-

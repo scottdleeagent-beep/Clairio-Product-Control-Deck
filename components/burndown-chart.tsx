@@ -9,7 +9,14 @@ type BurndownChartProps = {
 };
 
 export function BurndownChart({ points }: BurndownChartProps) {
-  const maxValue = Math.max(...points.map((point) => point.remaining));
+  if (points.length === 0) {
+    return <div className="empty-state">No snapshot history yet.</div>;
+  }
+
+  const maxValue = Math.max(
+    1,
+    ...points.map((point) => Math.max(point.remaining, point.completed))
+  );
 
   return (
     <div className="chart" aria-label="Burndown chart">
@@ -38,4 +45,3 @@ export function BurndownChart({ points }: BurndownChartProps) {
     </div>
   );
 }
-
