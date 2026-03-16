@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SourceSystem {
+  CLICKUP
+  NATIVE
+}
+
+enum TaskStatusGroup {
+  NOT_STARTED
+  IN_PROGRESS
+  BLOCKED
+  DONE
+}
+
+enum UserRole {
+  EXECUTIVE
+  MANAGER
+  CONTRIBUTOR
+  ADMIN
+}
+
+model Team {
+  id            String   @id @default(cuid())
+  name          String
+  slug          String   @unique
+  parentTeamId  String?
+  parentTeam    Team?    @relation("TeamHierarchy", fields: [parentTeamId], references: [id])
+  childTeams    Team[]   @relation("TeamHierarchy")
+  users         User[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model User {
+  id               String           @id @default(cuid())
+  email            String           @unique
+  name             String
+  role             UserRole
+  externalSourceId String?
+  active           Boolean          @default(true)
+  teamId           String?
+  team             Team?            @relation(fields: [teamId], references: [id])
+  ownedTasks       Task[]           @relation("TaskOwner")
+  assignments      TaskAssignment[]
+  ledInitiatives   Initiative[]     @relation("InitiativeOwner")
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+}
+
+model Initiative {
+  id               String   @id @default(cuid())
+  name             String
+  slug             String   @unique
+  status           String
+  externalSourceId String?
+  ownerId          String?
+  owner            User?    @relation("InitiativeOwner", fields: [ownerId], references: [id])
+  targetDate       DateTime?
+  tasks            Task[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Task {
+  id               String           @id @default(cuid())
+  title            String
+  description      String?
+  externalSourceId String?
+  sourceSystem     SourceSystem     @default(CLICKUP)
+  status           String
+  statusGroup      TaskStatusGroup
+  priority         String?
+  estimatePoints   Decimal?
+  estimateHours    Decimal?
+  dueDate          DateTime?
+  startDate        DateTime?
+  completedAt      DateTime?
+  blockedFlag      Boolean          @default(false)
+  ownerId          String?
+  owner            User?            @relation("TaskOwner", fields: [ownerId], references: [id])
+  initiativeId     String?
+  initiative       Initiative?      @relation(fields: [initiativeId], references: [id])
+  parentTaskId     String?
+  parentTask       Task?            @relation("TaskParent", fields: [parentTaskId], references: [id])
+  subtasks         Task[]           @relation("TaskParent")
+  assignments      TaskAssignment[]
+  snapshots        TaskSnapshot[]
+  statusEvents     TaskStatusEvent[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([externalSourceId, sourceSystem])
+  @@index([statusGroup, dueDate])
+}
+
+model TaskAssignment {
+  id             String   @id @default(cuid())
+  taskId         String
+  userId         String
+  assignmentType String   @default("PRIMARY")
+  task           Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+
+  @@unique([taskId, userId, assignmentType])
+}
+
+model TaskSnapshot {
+  id             String          @id @default(cuid())
+  taskId         String
+  snapshotDate   DateTime
+  status         String
+  statusGroup    TaskStatusGroup
+  blockedFlag    Boolean         @default(false)
+  estimatePoints Decimal?
+  estimateHours  Decimal?
+  dueDate        DateTime?
+  completedAt    DateTime?
+  ownerIds       String[]
+  task           Task            @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([snapshotDate])
+  @@unique([taskId, snapshotDate])
+}
+
+model TaskStatusEvent {
+  id             String          @id @default(cuid())
+  taskId         String
+  previousStatus String?
+  newStatus      String
+  statusGroup    TaskStatusGroup
+  changedAt      DateTime
+  task           Task            @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([changedAt])
+}
+
+model SyncRun {
+  id             String       @id @default(cuid())
+  sourceSystem   SourceSystem
+  startedAt      DateTime     @default(now())
+  finishedAt     DateTime?
+  status         String
+  recordsRead    Int          @default(0)
+  recordsUpserted Int         @default(0)
+  errorMessage   String?
+}
+
